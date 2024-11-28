@@ -6,7 +6,7 @@ WORKDIR /app
 
 # Kopiowanie plików do kontenera
 COPY requirements.txt requirements.txt
-COPY app.py app.py
+COPY s24110.py s24110.py
 COPY model.pkl model.pkl
 
 # Instalacja zależności
@@ -16,4 +16,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 EXPOSE 5000
 
 # Uruchomienie aplikacji
-CMD ["python", "app.py"]
+CMD ["python", "s24110.py"]
