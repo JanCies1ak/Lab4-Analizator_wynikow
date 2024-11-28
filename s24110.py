@@ -1,52 +1,39 @@
-import pandas as pd
+from flask import Flask, request, jsonify
 import numpy as np
-import matplotlib.pyplot as plt
-import os
-from sklearn.model_selection import train_test_split
+import pandas as pd
+import pickle
 from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
-data = pd.read_csv('https://vincentarelbundock.github.io/Rdatasets/csv/AER/CollegeDistance.csv')
-data = data.drop(columns=['rownames'])
-data = data.dropna()
+app = Flask(__name__)
 
-print(data.info())
-print(data.describe())
+with open('model.pkl', 'rb') as model_file:
+    model = pickle.load(model_file)
 
-data = pd.get_dummies(data, drop_first=True)
+@app.route('/predict', methods=['POST'])
+def predict():
+    try:
+        if request.is_json:
+            data = pd.DataFrame([request.json])
+        else:
+            data = pd.read_csv(request.files['file'])
 
-x = data.drop('score', axis=1)
-y = data['score']
+        print(data.info())
+        print(data.describe())
+        data = pd.get_dummies(data, drop_first=True)
+        print(data.info())
+        print(data.describe())
+        print('after',data)
 
-x_scaled = StandardScaler().fit_transform(x)
+        x_scaled = StandardScaler().fit_transform(data)
 
-x_train, x_test, y_train, y_test = train_test_split(x_scaled, y, test_size=0.2, random_state=42)
+        print('more',x_scaled)
 
-model = LinearRegression()
-model.fit(x_train, y_train)
+        prediction = model.predict(x_scaled)
 
-prediction = model.predict(x_test)
+        return jsonify({"prediction": prediction[0]})
 
-mae = mean_absolute_error(y_test, prediction)
-mse = mean_squared_error(y_test, prediction)
-r2 = r2_score(y_test, prediction)
+    except Exception as e:
+        return jsonify({"exception": str(e)})
 
-print(f"MAE: {mae}")
-print(f"MSE: {mse}")
-print(f"R²: {r2}")
-
-os.makedirs("Results", exist_ok=True)
-
-plt.scatter(y_test, prediction)
-plt.xlabel('Real values')
-plt.ylabel('Expected values')
-plt.title('Prediction results')
-plt.savefig('Results/prediction_results.png')
-
-with open('Results/results.md', 'w', encoding='utf-8') as file:
-    file.write(f"""### Results:
-- MAE: {mae}
-- MSE: {mse}
-- R²: {r2}
-""")
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
